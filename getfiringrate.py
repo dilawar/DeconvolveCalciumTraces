@@ -30,7 +30,7 @@ class LoadCalciumTrace(object):
 
         firingrate = []
         denoisedcalicumtrace = []
-        for ii in xrange(0, 100): #np.size(calciumtraces, 1)):
+        for ii in xrange(0, np.size(calciumtraces, 1)):
             fluor = calciumtraces[:, ii]
             print 'Deconvolving..',ii
             deconvolvedresult = constrained_foopsi(fluor)
