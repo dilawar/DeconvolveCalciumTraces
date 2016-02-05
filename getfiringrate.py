@@ -24,6 +24,7 @@ class LoadCalciumTrace(object):
         compiledata = np.asarray(np.hstack(compiledata))
         np.savetxt(os.path.join(self.WorkingDirectory, "rawdata.csv"), compiledata, delimiter=",")
 
+        print np.shape(compiledata)
         return compiledata
 
     def convert_to_firing_rate(self, calciumtraces):
@@ -32,8 +33,14 @@ class LoadCalciumTrace(object):
         denoisedcalicumtrace = []
         for ii in xrange(0, np.size(calciumtraces, 1)):
             fluor = calciumtraces[:, ii]
-            print 'Deconvolving..',ii
+            print 'Deconvolving..', ii
+
             deconvolvedresult = constrained_foopsi(fluor)
+            print np.ndim(deconvolvedresult[5])
+
+            if np.ndim(deconvolvedresult[5]) > 1:
+                print 'Skipping..Cell ', ii
+                continue
             firingrate.append(deconvolvedresult[5])
             denoisedcalicumtrace.append(deconvolvedresult[0])
 
