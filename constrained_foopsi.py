@@ -9,12 +9,12 @@ Created on Tue Sep  1 16:11:25 2015
 # Written by 
 
 import numpy as np
-import scipy.signal 
+import scipy.signal
 import scipy.linalg
-
-from warnings import warn    
+from warnings import warn
 import time
-import sys    
+import sys
+
 try:
     from cvxopt import matrix, spmatrix, spdiag, solvers
     import picos
@@ -22,22 +22,21 @@ except ImportError:
     raise ImportError('Constrained Foopsi requires cvxopt and picos packages.')
 
 
-#%%
-def constrained_foopsi(fluor, 
-                     b = None, 
-                     c1 = None, 
-                     g = None, 
-                     sn = None, 
-                     p= 2, 
-                     method = 'cvx', 
-                     bas_nonneg = True, 
-                     noise_range = [.25,.5],
-                     noise_method = 'logmexp',
-                     lags = 5, 
-                     resparse = 0,
-                     fudge_factor = 1, 
-                     verbosity = False):
-
+# %%
+def constrained_foopsi(fluor,
+                       b=None,
+                       c1=None,
+                       g=None,
+                       sn=None,
+                       p=2,
+                       method='cvx',
+                       bas_nonneg=True,
+                       noise_range=[.25, .5],
+                       noise_method='logmexp',
+                       lags=5,
+                       resparse=0,
+                       fudge_factor=1,
+                       verbosity=False):
     """
     Infer the most likely discretized spike train underlying a fluorescence
     trace, using a noise constrained deconvolution approach
@@ -84,28 +83,26 @@ def constrained_foopsi(fluor,
     * Machado et al. 2015. Cell 162(2):338-350
     """
 
-    
-    if g is None or sn is None:        
-        g,sn = estimate_parameters(fluor, p=p, sn=sn, g = g, range_ff=noise_range, method=noise_method, lags=lags, fudge_factor=fudge_factor)
+    if g is None or sn is None:
+        g, sn = estimate_parameters(fluor, p=p, sn=sn, g=g, range_ff=noise_range, method=noise_method, lags=lags,
+                                    fudge_factor=fudge_factor)
 
-  
-    
     T = len(fluor)
     # construct deconvolution matrix  (sp = G*c) 
-    G = spmatrix(1.,range(T),range(T),(T,T))
+    G = spmatrix(1., range(T), range(T), (T, T))
 
     for i in range(p):
-        G = G + spmatrix(-g[i],np.arange(i+1,T),np.arange(T-i-1),(T,T))
-        
-    gr = np.roots(np.concatenate([np.array([1]),-g.flatten()])) 
-    gd_vec = np.max(gr)**np.arange(T)  # decay vector for initial fluorescence
-    gen_vec = G * matrix(np.ones(fluor.size))  
-    
+        G = G + spmatrix(-g[i], np.arange(i + 1, T), np.arange(T - i - 1), (T, T))
+
+    gr = np.roots(np.concatenate([np.array([1]), -g.flatten()]))
+    gd_vec = np.max(gr) ** np.arange(T)  # decay vector for initial fluorescence
+    gen_vec = G * matrix(np.ones(fluor.size))
+
     # Initialize variables in our problem
     prob = picos.Problem()
-    
+
     # Define variables
-    calcium_fit = prob.add_variable('calcium_fit', fluor.size)    
+    calcium_fit = prob.add_variable('calcium_fit', fluor.size)
     cnt = 0
     if b is None:
         flag_b = True
@@ -115,7 +112,7 @@ def constrained_foopsi(fluor,
             b_lb = 0
         else:
             b_lb = np.min(fluor)
-            
+
         prob.add_constraint(b >= b_lb)
     else:
         flag_b = False
@@ -127,79 +124,80 @@ def constrained_foopsi(fluor,
         prob.add_constraint(c1 >= 0)
     else:
         flag_c1 = False
-    
+
     # Add constraints    
     prob.add_constraint(G * calcium_fit >= 0)
-    res = abs(matrix(fluor.astype(float)) - calcium_fit - b*matrix(np.ones(fluor.size)) - matrix(gd_vec) * c1)
+    res = abs(matrix(fluor.astype(float)) - calcium_fit - b * matrix(np.ones(fluor.size)) - matrix(gd_vec) * c1)
     prob.add_constraint(res < sn * np.sqrt(fluor.size))
     prob.set_objective('min', calcium_fit.T * gen_vec)
-    
+
     # solve problem
     try:
         prob.solve(solver='mosek', verbose=verbosity)
         sel_solver = 'mosek'
-#        prob.solve(solver='gurobi', verbose=verbosity)
-#        sel_solver = 'gurobi'
+    #        prob.solve(solver='gurobi', verbose=verbosity)
+    #        sel_solver = 'gurobi'
     except ImportError:
         warn('MOSEK is not installed. Spike inference may be VERY slow!')
         sel_solver = []
         prob.solver_selection()
         prob.solve(verbose=verbosity)
-        
+
     # if problem in infeasible due to low noise value then project onto the cone of linear constraints with cvxopt
     if prob.status == 'prim_infeas_cer' or prob.status == 'dual_infeas_cer' or prob.status == 'primal infeasible':
-        warn('Original problem infeasible. Adjusting noise level and re-solving')   
+        warn('Original problem infeasible. Adjusting noise level and re-solving')
         # setup quadratic problem with cvxopt        
         solvers.options['show_progress'] = verbosity
         ind_rows = range(T)
         ind_cols = range(T)
         vals = np.ones(T)
         if flag_b:
-            ind_rows = ind_rows + range(T) 
-            ind_cols = ind_cols + [T]*T
-            vals = np.concatenate((vals,np.ones(T)))
+            ind_rows = ind_rows + range(T)
+            ind_cols = ind_cols + [T] * T
+            vals = np.concatenate((vals, np.ones(T)))
         if flag_c1:
             ind_rows = ind_rows + range(T)
-            ind_cols = ind_cols + [T+cnt-1]*T
-            vals = np.concatenate((vals,np.squeeze(gd_vec)))            
-        P = spmatrix(vals,ind_rows,ind_cols,(T,T+cnt))
-        H = P.T*P
-        Py = P.T*matrix(fluor.astype(float))
-        sol = solvers.qp(H,-Py,spdiag([-G,-spmatrix(1.,range(cnt),range(cnt))]),matrix(0.,(T+cnt,1)))
+            ind_cols = ind_cols + [T + cnt - 1] * T
+            vals = np.concatenate((vals, np.squeeze(gd_vec)))
+        P = spmatrix(vals, ind_rows, ind_cols, (T, T + cnt))
+        H = P.T * P
+        Py = P.T * matrix(fluor.astype(float))
+        sol = solvers.qp(H, -Py, spdiag([-G, -spmatrix(1., range(cnt), range(cnt))]), matrix(0., (T + cnt, 1)))
         xx = sol['x']
         c = np.array(xx[:T])
-        sp = np.array(G*matrix(c))
+        sp = np.array(G * matrix(c))
         c = np.squeeze(c)
         if flag_b:
-            b = np.array(xx[T+1]) + b_lb
+            b = np.array(xx[T + 1]) + b_lb
         if flag_c1:
             c1 = np.array(xx[-1])
-        sn = np.linalg.norm(fluor-c-c1*gd_vec-b)/np.sqrt(T)   
-    else: # readout picos solution
+        sn = np.linalg.norm(fluor - c - c1 * gd_vec - b) / np.sqrt(T)
+    else:  # readout picos solution
         c = np.squeeze(calcium_fit.value)
-        sp = np.squeeze(np.asarray(G*calcium_fit.value))        
-        if flag_b:    
-            b = np.squeeze(b.value)        
-        if flag_c1:    
-            c1 = np.squeeze(c1.value)                    
+        sp = np.squeeze(np.asarray(G * calcium_fit.value))
+        if flag_b:
+            b = np.squeeze(b.value)
+        if flag_c1:
+            c1 = np.squeeze(c1.value)
 
-    return c,b,c1,g,sn,sp
+    return c, b, c1, g, sn, sp
 
 
-def estimate_parameters(fluor, p = 2, sn = None, g = None, range_ff = [0.25,0.5], method = 'logmexp', lags = 5, fudge_factor = 1):
+def estimate_parameters(fluor, p=2, sn=None, g=None, range_ff=[0.25, 0.5], method='logmexp', lags=5, fudge_factor=1):
     """
     Estimate noise standard deviation and AR coefficients if they are not present
     """
-    
+
     if sn is None:
-        sn = GetSn(fluor,range_ff,method)
-        
+        sn = GetSn(fluor, range_ff, method)
+
     if g is None:
-        g = estimate_time_constant(fluor,p,sn,lags,fudge_factor)
+        g = estimate_time_constant(fluor, p, sn, lags, fudge_factor)
 
-    return g,sn
+    return g, sn
 
-def estimate_time_constant(fluor, p = 2, sn = None, lags = 5, fudge_factor = 1):
+
+def estimate_time_constant(fluor, p=2, sn=None, lags=5, fudge_factor=1):
     """    
     Estimate AR model parameters through the autocovariance function    
     Inputs
@@ -219,29 +217,29 @@ def estimate_time_constant(fluor, p = 2, sn = None, lags = 5, fudge_factor = 1):
     Return
     -----------
     g       : estimated coefficients of the AR process
-    """    
-    
+    """
 
     if sn is None:
         sn = GetSn(fluor)
-        
+
     lags += p
-    xc = axcov(fluor,lags)        
-    xc = xc[:,np.newaxis]
-    
-    A = scipy.linalg.toeplitz(xc[lags+np.arange(lags)],xc[lags+np.arange(p)]) - sn**2*np.eye(lags,p)
-    g = np.linalg.lstsq(A,xc[lags+1:])[0]
+    xc = axcov(fluor, lags)
+    xc = xc[:, np.newaxis]
+
+    A = scipy.linalg.toeplitz(xc[lags + np.arange(lags)], xc[lags + np.arange(p)]) - sn ** 2 * np.eye(lags, p)
+    g = np.linalg.lstsq(A, xc[lags + 1:])[0]
     if fudge_factor < 1:
-        gr = fudge_factor*np.roots(np.concatenate([np.array([1]),-g.flatten()]))
-        gr = (gr+gr.conjugate())/2
-        gr[gr>1] = 0.95
-        gr[gr<0] = 0.15
+        gr = fudge_factor * np.roots(np.concatenate([np.array([1]), -g.flatten()]))
+        gr = (gr + gr.conjugate()) / 2
+        gr[gr > 1] = 0.95
+        gr[gr < 0] = 0.15
         g = np.poly(gr)
-        g = -g[1:]        
-        
+        g = -g[1:]
+
     return g.flatten()
-    
-def GetSn(fluor, range_ff = [0.25,0.5], method = 'logmexp'):
+
+
+def GetSn(fluor, range_ff=[0.25, 0.5], method='logmexp'):
     """    
     Estimate noise power through the power spectral density over the range of large frequencies    
     Inputs
@@ -258,20 +256,20 @@ def GetSn(fluor, range_ff = [0.25,0.5], method = 'logmexp'):
     -----------
     sn       : noise standard deviation
     """
-    
 
     ff, Pxx = scipy.signal.welch(fluor)
     ind1 = ff > range_ff[0]
     ind2 = ff < range_ff[1]
-    ind = np.logical_and(ind1,ind2)
+    ind = np.logical_and(ind1, ind2)
     Pxx_ind = Pxx[ind]
     sn = {
-        'mean': lambda Pxx_ind: np.sqrt(np.mean(Pxx_ind/2)),
-        'median': lambda Pxx_ind: np.sqrt(np.median(Pxx_ind/2)),
-        'logmexp': lambda Pxx_ind: np.sqrt(np.exp(np.mean(np.log(Pxx_ind/2))))
+        'mean': lambda Pxx_ind: np.sqrt(np.mean(Pxx_ind / 2)),
+        'median': lambda Pxx_ind: np.sqrt(np.median(Pxx_ind / 2)),
+        'logmexp': lambda Pxx_ind: np.sqrt(np.exp(np.mean(np.log(Pxx_ind / 2))))
     }[method](Pxx_ind)
 
     return sn
+
 
 def axcov(data, maxlag=5):
     """
@@ -287,7 +285,7 @@ def axcov(data, maxlag=5):
     axcov : array
         Autocovariances computed from -maxlag:0:maxlag
     """
-    
+
     data = data - np.mean(data)
     T = len(data)
     bins = np.size(data)
@@ -295,9 +293,10 @@ def axcov(data, maxlag=5):
     xcov = np.fft.ifft(np.square(np.abs(xcov)))
     xcov = np.concatenate([xcov[np.arange(xcov.size - maxlag, xcov.size)],
                            xcov[np.arange(0, maxlag + 1)]])
-    #xcov = xcov/np.concatenate([np.arange(T-maxlag,T+1),np.arange(T-1,T-maxlag-1,-1)])
-    return np.real(xcov/T)
-    
+    # xcov = xcov/np.concatenate([np.arange(T-maxlag,T+1),np.arange(T-1,T-maxlag-1,-1)])
+    return np.real(xcov / T)
+
+
 def nextpow2(value):
     """
     Find exponent such that 2^exponent is equal to or greater than abs(value).
@@ -308,13 +307,9 @@ def nextpow2(value):
     -------
     exponent : int
     """
-    
+
     exponent = 0
     avalue = np.abs(value)
     while avalue > np.power(2, exponent):
         exponent += 1
-    return exponent        
-    
- 
-
-
+    return exponent
