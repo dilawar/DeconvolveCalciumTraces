@@ -1,0 +1,5 @@
+This analsysis require python-brian2 package.
+
+    $ pip install --pre brian2 
+
+Brian is a neural simulator.

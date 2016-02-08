@@ -42,7 +42,6 @@ def spikes_to_fluroscence( init_activity, spike_at, dt, **kwargs):
 def main():
     test = 0.1 * np.random.random_integers(0, 200, 100)
     test = np.sort( test )
-    print('INPUT : %s' % test)
     dt = 1e-2
     camp = np.zeros( test.max() /dt )
     camp = spikes_to_fluroscence( camp, test, dt)
