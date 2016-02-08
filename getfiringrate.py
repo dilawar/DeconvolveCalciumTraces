@@ -2,7 +2,6 @@
 import scipy.io
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
 import os
 from constrained_foopsi import constrained_foopsi
 
@@ -19,10 +18,21 @@ class LoadCalciumTrace(object):
         calcium = alldata[self.key]
 
         compiledata = []
+        fishnumber = []
+        regionnumber = []
         for ii in xrange(0, np.size(calcium, 1)):  # Compile from all fish
             compiledata.append(calcium[0, ii][11:, :])
+            fishnumber.append(calcium[0, ii][4, :])
+            regionnumber.append(calcium[0, ii][8, :])
+
+        print fishnumber
 
         compiledata = np.asarray(np.hstack(compiledata))
+        fishnumber = np.asarray(np.hstack(fishnumber))
+        regionnumber = np.asarray(np.hstack(regionnumber))
+
+
+
         np.savetxt(os.path.join(self.WorkingDirectory, key + "_rawdata.csv"), compiledata, delimiter=",")
 
         print np.shape(compiledata)
@@ -63,10 +73,10 @@ class LoadCalciumTrace(object):
 
 if __name__ == '__main__':
     DataPath = '/Users/seetha/Desktop/Modelling/Data/Blue_Con_Fish104-109.mat'
-    key = 'A_Off_SubClusters'
+    key = 'A_On_SubClusters'
 
     WorkingDirectory, FileName = os.path.split(DataPath)
     Habenula = LoadCalciumTrace(WorkingDirectory, FileName, key)
     CalciumData = Habenula.get_matfile_convert_to_csv()
-    Habenula.convert_to_firing_rate(CalciumData)
+    # Habenula.convert_to_firing_rate(CalciumData)
     # Habenula.test()
