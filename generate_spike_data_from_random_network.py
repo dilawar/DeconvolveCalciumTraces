@@ -1,6 +1,6 @@
-"""network.py: 
+"""generate_spike_data_from_random_network.py: 
 
-Construct network of habenula
+    Create a random netwok with given parameters and generate spike trains.
 
 """
     
@@ -12,6 +12,7 @@ __version__          = "1.0.0"
 __maintainer__       = "Dilawar Singh"
 __email__            = "dilawars@ncbs.res.in"
 __status__           = "Development"
+
 
 from brian2 import *
 import networkx as nx
@@ -86,4 +87,3 @@ def main( ):
 
 if __name__ == '__main__':
     main()
-
