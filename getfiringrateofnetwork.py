@@ -28,6 +28,9 @@ class LoadCalciumTrace(object):
             # Append fish information
             fish_num = np.ones(np.size(calcium_dfof_norm, 1)) * int(ii[4:7])
             plane_num = (alldata['CellZ5'][3, :] < 4).astype(int)
+            print plane_num.T
+            np.savetxt(os.path.join(self.WorkingDirectory, ii[:-4] + '_planenum.csv'), plane_num.T, delimiter=",")
+
             compiledata_perfish = np.vstack((fish_num.T, plane_num.T, calcium_dfof_norm))
 
             print np.shape(compiledata_perfish)
@@ -87,6 +90,23 @@ class LoadCalciumTrace(object):
             plt.plot(np.clip(firingrate[2:, :], 0, np.max(firingrate[2:, :])), '.')
             plt.savefig(os.path.join(WorkingDirectory, 'Images', ff[:-4] + '.png'))
 
+    def test(self):
+        mat_filenames = [f for f in os.listdir(self.WorkingDirectory) if f.endswith('.mat')]
+        for ii in mat_filenames:
+            alldata = scipy.io.loadmat(os.path.join(self.WorkingDirectory, ii))
+            calcium = alldata['CellZ5'][11:, :]
+
+            row = alldata['CellZ5'][3, :]
+            neuropil = alldata['NeuropilList']
+
+            count = 0
+            for jj in xrange(0, 5):
+                A1 = calcium[:, row == jj + 1]
+                A2 = A1[:, np.squeeze(neuropil[0][jj] == 0)]
+                count += np.size(A2, 1)
+
+            print 'In Fish..', ii, 'Total Cells ', count
+
 
 if __name__ == '__main__':
     WorkingDirectory = '/Users/seetha/Desktop/Modelling/Data/Network/'
@@ -102,5 +122,5 @@ if __name__ == '__main__':
 
     Habenula = LoadCalciumTrace(WorkingDirectory)
     Habenula.get_data_from_matfile()
-    Habenula.convert_to_firing_rate()
+    # Habenula.convert_to_firing_rate()
     # Habenula.test()
