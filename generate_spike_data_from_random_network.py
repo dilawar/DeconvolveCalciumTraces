@@ -33,8 +33,6 @@ inhibitoryFraction = 0.5
 lhbExcSynapticWeight = 1.62
 lhbInhibSynapticWeight = 9     # Should be positive
 
-
-
 # Model of LHB neurons.
 tau = 10*ms
 lhbEqs = '''
@@ -44,7 +42,7 @@ dgi/dt = -gi/(10*ms) : volt
 
 '''
 
-runTime = 5
+runTime = 30
 
 print('[INFO] Constructing LHB with %s neurons' % nNeuronsInLHB )
 print('[INFO]  Eq : %s' % lhbEqs )
@@ -81,12 +79,15 @@ inputNeurons = NeuronGroup( 20
         , threshold='v>=0.5', reset='v=0.0'
         )
 inputNeurons.v = '0.5*rand()'
-inputExcSynapses = Synapses( inputNeurons, lhbExc, pre='ge+=%f*mV' % lhbExcSynapticWeight)
-inputExcSynapses.connect( True, p = 0.1 )
 
+# These neurons turns on excitatory 
+inputExcSynapses = Synapses( inputNeurons, lhbExc, pre='ge+=%f*mV' % lhbExcSynapticWeight)
+inputExcSynapses.connect( True, p = 0.5 )
+
+# These synapses tuns on lhbInhib neurons.
 inputExcSynapses = Synapses(inputNeurons, lhbInhib, pre='ge+=%s*mV' %
         lhbExcSynapticWeight)
-inputExcSynapses.connect(True, p = 0.1)
+inputExcSynapses.connect(True, p = 0.5)
 #pylab.figure()
 #pylab.plot( stimulus.values )
 #pylab.show( )
@@ -99,8 +100,8 @@ def main( ):
     net.add( [ lhbMonitor, inputMonitor ] )
     net.run( runTime*second )
     pylab.subplot(2, 1, 1)
-    # plot( lhbMonitor.t, lhbMonitor.i, '.')
-    plot( inputMonitor.t, inputMonitor.i, '.' )
+    plot( lhbMonitor.t, lhbMonitor.i, '.')
+    #plot( inputMonitor.t, inputMonitor.i, '.' )
 
     binInterval = 0.5
     nspikesDict = helper.spikes_in_interval( lhbMonitor, runTime, binInterval)
@@ -117,6 +118,7 @@ def main( ):
             if _bin.shape[0] > 0:
                 r = s2g.spikes_to_fluroscence(r, _bin, dtForFluroscenceComputation)
         rows.append( r )
+
     pylab.subplot(2, 1, 2)
     pylab.plot( rows[4] )
     pylab.plot( rows[5] )
