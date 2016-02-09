@@ -25,9 +25,14 @@ import spike_to_gcamp as s2g
 #prefs.codegen.target = 'cython'
 
 # Construct LHB
-nNeuronsInLHB = 20 # 00
+N = 100
 # Fraction of LHB neurons which are inhibitory
-inhibitoryFraction = 0.5
+inhibFrac = 0.3
+excFrac = 0.6
+offFrac = 0.1
+
+total = inhibFrac + excFrac + offFrac
+assert np.isclose(total, 1.0), "Expected 1.0 got %s" % total
 
 # Synaptic weights
 lhbExcSynapticWeight = 1.62
@@ -44,9 +49,9 @@ dgi/dt = -gi/(10*ms) : volt
 
 runTime = 20
 
-print('[INFO] Constructing LHB with %s neurons' % nNeuronsInLHB )
+print('[INFO] Constructing LHB with %s neurons' % N )
 print('[INFO]  Eq : %s' % lhbEqs )
-lhb = NeuronGroup(nNeuronsInLHB
+lhb = NeuronGroup(N
         , lhbEqs
         , threshold='v>-49.05*mV'
         , reset='v=-60*mV'
@@ -55,16 +60,23 @@ lhb = NeuronGroup(nNeuronsInLHB
 lhb.v = -60*mV
 
 # Inhibitory group
-lhbInhib = lhb[0:int(inhibitoryFraction*nNeuronsInLHB)]
+lhbInhib = lhb[0:int(inhibFrac*N)]
+print("[INFO] Total inhibitory neurons: %s" % len(lhbInhib))
 # Excitatory group.
-lhbExc = lhb[int(inhibitoryFraction*nNeuronsInLHB):]
+lhbExc = lhb[int(inhibFrac*N):int((inhibFrac+excFrac)*N)+1]
+print("[INFO] Total excitatory neurons %s" % len(lhbExc))
+lhbOff = lhb[-int(offFrac*N):]
+print('[INFO] Total off neurons: %s' % len(lhbOff))
+total = len(lhbExc) + len(lhbInhib) + len(lhbOff) 
+assert total == N, "Expecting %s, got %s" % (N, total)
 
-# Make synapses in LHB
+## NOTE: Connectivity in LHB is not known.
 excSynapses = Synapses( lhbExc, lhb, pre='ge+=%f*mV' % lhbExcSynapticWeight)
-excSynapses.connect( True, p = 0.02 )    # p is the probability of release
+excSynapses.connect( True, p = 0.01 )    # p is the probability of release
 
 inhSynapse = Synapses( lhbInhib, lhb, pre='gi-=%f*mV' % lhbInhibSynapticWeight)
-inhSynapse.connect( True, p = 0.02 )
+inhSynapse.connect( True, p = 0.01 )
+
 
 # Now create some more neuron which are input to excitatory neurons. These
 # neurons are stimulated by current pulse.
@@ -74,26 +86,32 @@ stimulus = TimedArray(
         np.hstack( [ np.hstack([ onArray, offArray ]) for x in range( runTime / 2) ] )
         , dt= defaultclock.dt
         )
-inputNeurons = NeuronGroup( 20
+
+blueLightNeuron = NeuronGroup( 1
         , 'dv/dt = (-v + stimulus(t))/(10*ms) : 1'
         , threshold='v>=0.5', reset='v=0.0'
         )
-inputNeurons.v = '0.5*rand()'
+blueLightNeuron.v = '0.5*rand()'
 
 # These neurons turns on excitatory 
-inputExcSynapses = Synapses( inputNeurons, lhbExc, pre='ge+=%f*mV' % lhbExcSynapticWeight)
-inputExcSynapses.connect( True, p = 0.7 )
+inputExcSynapses = Synapses( blueLightNeuron, lhbExc
+        , pre='ge+=%f*mV' % lhbExcSynapticWeight
+        )
+
+inputExcSynapses.connect( True, p = 0.99 )
 
 # These synapses tuns on lhbInhib neurons.
-inputExcSynapses = Synapses(inputNeurons, lhbInhib, pre='ge+=%s*mV' %
-        lhbExcSynapticWeight)
-inputExcSynapses.connect( True, p = 0.7 )
+inputInhibSynapses = Synapses(blueLightNeuron, lhbInhib
+        , pre='gi-=%f*mV' % lhbInhibSynapticWeight
+        )
+inputInhibSynapses.connect( True, p = 0.99 )
+
 #pylab.figure()
 #pylab.plot( stimulus.values )
 #pylab.show( )
 
 lhbMonitor = SpikeMonitor( lhb )
-inputMonitor = SpikeMonitor( inputNeurons )
+inputMonitor = SpikeMonitor( blueLightNeuron )
 
 def main( ):
     net = Network( collect() )
@@ -101,7 +119,6 @@ def main( ):
     net.run( runTime*second )
     pylab.subplot(2, 1, 1)
     plot( lhbMonitor.t, lhbMonitor.i, '.')
-    #plot( inputMonitor.t, inputMonitor.i, '.' )
 
     binInterval = 0.5
     nspikesDict = helper.spikes_in_interval( lhbMonitor, runTime, binInterval)
