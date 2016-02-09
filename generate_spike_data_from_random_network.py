@@ -42,7 +42,7 @@ dgi/dt = -gi/(10*ms) : volt
 
 '''
 
-runTime = 30
+runTime = 20
 
 print('[INFO] Constructing LHB with %s neurons' % nNeuronsInLHB )
 print('[INFO]  Eq : %s' % lhbEqs )
@@ -82,12 +82,12 @@ inputNeurons.v = '0.5*rand()'
 
 # These neurons turns on excitatory 
 inputExcSynapses = Synapses( inputNeurons, lhbExc, pre='ge+=%f*mV' % lhbExcSynapticWeight)
-inputExcSynapses.connect( True, p = 0.5 )
+inputExcSynapses.connect( True, p = 0.7 )
 
 # These synapses tuns on lhbInhib neurons.
 inputExcSynapses = Synapses(inputNeurons, lhbInhib, pre='ge+=%s*mV' %
         lhbExcSynapticWeight)
-inputExcSynapses.connect(True, p = 0.5)
+inputExcSynapses.connect( True, p = 0.7 )
 #pylab.figure()
 #pylab.plot( stimulus.values )
 #pylab.show( )
