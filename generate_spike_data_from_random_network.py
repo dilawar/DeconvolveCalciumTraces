@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """generate_spike_data_from_random_network.py: 
 
     Create a random netwok with given parameters and generate spike trains.
@@ -20,6 +22,8 @@ import helper
 import pylab 
 import spike_to_gcamp as s2g
 
+#prefs.codegen.target = 'cython'
+
 # Construct LHB
 nNeuronsInLHB = 20 # 00
 # Fraction of LHB neurons which are inhibitory
@@ -40,9 +44,16 @@ dgi/dt = -gi/(10*ms) : volt
 
 '''
 
+runTime = 5
+
 print('[INFO] Constructing LHB with %s neurons' % nNeuronsInLHB )
 print('[INFO]  Eq : %s' % lhbEqs )
-lhb = NeuronGroup(nNeuronsInLHB, lhbEqs, threshold='v>-49.05*mV', reset='v=-60*mV') 
+lhb = NeuronGroup(nNeuronsInLHB
+        , lhbEqs
+        , threshold='v>-49.05*mV'
+        , reset='v=-60*mV'
+        , 
+        )
 lhb.v = -60*mV
 
 # Inhibitory group
@@ -57,13 +68,39 @@ excSynapses.connect( True, p = 0.02 )    # p is the probability of release
 inhSynapse = Synapses( lhbInhib, lhb, pre='gi-=%f*mV' % lhbInhibSynapticWeight)
 inhSynapse.connect( True, p = 0.02 )
 
+# Now create some more neuron which are input to excitatory neurons. These
+# neurons are stimulated by current pulse.
+onArray = np.random.random( int(2/defaultclock.dt) )
+offArray = np.zeros( int(2/defaultclock.dt))
+stimulus = TimedArray( 
+        np.hstack( [ np.hstack([ onArray, offArray ]) for x in range( runTime / 2) ] )
+        , dt= defaultclock.dt
+        )
+inputNeurons = NeuronGroup( 20
+        , 'dv/dt = (-v + stimulus(t))/(10*ms) : 1'
+        , threshold='v>=0.5', reset='v=0.0'
+        )
+inputNeurons.v = '0.5*rand()'
+inputExcSynapses = Synapses( inputNeurons, lhbExc, pre='ge+=%f*mV' % lhbExcSynapticWeight)
+inputExcSynapses.connect( True, p = 0.1 )
+
+inputExcSynapses = Synapses(inputNeurons, lhbInhib, pre='ge+=%s*mV' %
+        lhbExcSynapticWeight)
+inputExcSynapses.connect(True, p = 0.1)
+#pylab.figure()
+#pylab.plot( stimulus.values )
+#pylab.show( )
+
 lhbMonitor = SpikeMonitor( lhb )
+inputMonitor = SpikeMonitor( inputNeurons )
 
 def main( ):
-    runTime = 5
-    run( runTime*second )
+    net = Network( collect() )
+    net.add( [ lhbMonitor, inputMonitor ] )
+    net.run( runTime*second )
     pylab.subplot(2, 1, 1)
-    plot( lhbMonitor.t, lhbMonitor.i, '.')
+    # plot( lhbMonitor.t, lhbMonitor.i, '.')
+    plot( inputMonitor.t, inputMonitor.i, '.' )
 
     binInterval = 0.5
     nspikesDict = helper.spikes_in_interval( lhbMonitor, runTime, binInterval)
@@ -71,9 +108,9 @@ def main( ):
     dtForFluroscenceComputation = 0.01
     rows = []
     for k in nspikesDict.keys():
-        print('[DEBUG] ======== Bins for neuron %s' % k )
+        #print('[DEBUG] ======== Bins for neuron %s' % k )
         vec = nspikesDict[k]
-        print('         %s' % vec)
+        #print('         %s' % vec)
         r = np.zeros( runTime / dtForFluroscenceComputation )
         for _bin in vec:
             _bin = np.sort( _bin )
