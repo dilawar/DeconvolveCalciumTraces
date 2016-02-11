@@ -1,0 +1,9 @@
+Thu 11 Feb 2016 12:34:30 PM IST
+
+    Raphe has interneurons, which are inhibitory in nature.
+    On average inhibition from interneurons are balanced by excitation by LHB.
+
+    I am putting 15 interneurons and 15 raphe neurons. On average, each
+    interneuron is making 3 synapses onto each raphe neurons. If each excitatory
+    synapse is 1.62 mV then lhb -> raphe should have (9 / 1.62) * 3 = 16.7
+    connections i.e. with probability 16.7 / N = 100 .
