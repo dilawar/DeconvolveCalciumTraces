@@ -3,6 +3,7 @@
 A small network of raphe neurons.
 
 """
+
     
 __author__           = "Dilawar Singh"
 __copyright__        = "Copyright 2015, Dilawar Singh and NCBS Bangalore"
@@ -19,19 +20,26 @@ import sys
 
 
 """
+
+
 A network with rapheN raphe neurons and interN interneurons. Each rapheN
 neurons recive an external excitatory synapse. If one of those input is
 shutdown, this network should shut down.
 """
 
-rapheN = 6
-interN = 3
+
+rapheN = 9
+interN = 9
+inputN = rapheN
 
 monitors = []
 
-stimulus = TimedArray(np.array([45, 1000]), dt=1500*ms)
+footer = ""
 
-raphe = NeuronGroup( rapheN
+shutdown = 1.5
+stimulus = TimedArray(np.array([45, 58]), dt=shutdown*second)
+
+inputNet = NeuronGroup( inputN 
         , '''
             dv/dt = (ge+gi-(v+45*mV))/(40*ms) : volt
             dge/dt = -ge/(5*ms) : volt
@@ -44,7 +52,7 @@ raphe = NeuronGroup( rapheN
 
 # This is like previous group but only single neuron. We control this neuron
 # using a TimedArray and it shuts off at 1500 millisec.
-rapheWithClamp = NeuronGroup( 1
+inputWithClamp = NeuronGroup( 1
         , '''
             dv/dt = (ge+gi-(v+stimulus(t)*mV))/(40*ms) : volt
             dge/dt = -ge/(5*ms) : volt
@@ -54,9 +62,12 @@ rapheWithClamp = NeuronGroup( 1
         , threshold='v > -50*mV'
         , reset='v = -70*mV'
         )
+footer += "Among all input neurons, one neuron shuts down at %s sec" % shutdown
+footer += " shown by red X"
 
-rapheMonitor = SpikeMonitor( raphe )
-rapheMonitor1 = SpikeMonitor( rapheWithClamp )
+inputMonitor = SpikeMonitor( inputNet )
+inputClampedMonitor = SpikeMonitor( inputWithClamp )
+
 
 # I suspect interneurons to be very fast spiking with tau less than 1ms. These
 # neurons also have low threhold. It is known that some interneurons fires as
@@ -70,28 +81,49 @@ interneuronNet = NeuronGroup( interN
         , threshold='v >-50*mV'
         , reset = 'v = -70*mV'
         )
+interMonitor = SpikeMonitor( interneuronNet )
+
+rapheNet = NeuronGroup( rapheN
+        , '''
+            dv/dt = (ge+gi-(v+45*mV))/(40*ms) : volt
+            dge/dt = -ge/(5*ms) : volt
+            dgi/dt = -gi/(10*ms) : volt
+
+        '''
+        , threshold='v > -50*mV'
+        , reset='v = -70*mV'
+        )
+rapheMonitor = SpikeMonitor( rapheNet )
+
+
+# Input-net makes connections onto raphe.
+inputSyn = Synapses( inputNet, rapheNet )
+inputSyn.connect( True, p = 1.0 )
 
 # These interneurons make very weak inhibitory but many syapases onto each
 # other.
-interSyn = Synapses( interneuronNet, interneuronNet, pre='gi-=9*mV')
-probConnection = 0.0 /interN
-interSyn.connect( True, p = probConnection)
+interSyn = Synapses( interneuronNet, interneuronNet, pre='ge+=2*mV')
+interSyn.connect( 'i!=j' )
 
 # However, raphe neurons make strong inhibitory synapses onto interneurons.
-for rapheG in [ raphe, rapheWithClamp]:
-    riToii = Synapses( rapheG, interneuronNet, pre='ge+=5*mV')
-    riToii.connect( True, p = 0.5 )
+clampedSyn = Synapses( inputWithClamp, rapheNet, pre='ge-=9*mV')
+clampedSyn.connect( 'abs(i-j)<1' )
 
-interMonitor = SpikeMonitor( interneuronNet )
 
 run( 3*second )
-pylab.subplot(3, 1, 1)
-plot( interMonitor.t, interMonitor.i, '.' )
-pylab.title( 'Interneurons, p(IN --| IN) = %s' % probConnection  )
-pylab.subplot(3, 1, 2)
-plot( rapheMonitor.t, rapheMonitor.i, '.' )
-pylab.subplot(3, 1, 3)
-plot( rapheMonitor1.t, rapheMonitor1.i, '.' )
+pylab.subplot(4, 1, 2)
+pylab.plot( inputMonitor.t, inputMonitor.i, '|')
+plot( inputClampedMonitor.t, inputClampedMonitor.i, 'x' )
+pylab.ylim([-1, inputN] )
+pylab.title( 'Input spikes')
+
+pylab.subplot(4, 1, 3)
+plot( interMonitor.t, interMonitor.i, '|' ) 
+
+pylab.subplot(4, 1, 4)
+plot( rapheMonitor.t, rapheMonitor.i, '|' ) 
 pylab.title( 'Raphe neurons' )
+pylab.suptitle( footer, fontsize=8, verticalalignment = 'bottom' )
+pylab.tight_layout()
 pylab.savefig( "%s.png" % sys.argv[0] )
 
