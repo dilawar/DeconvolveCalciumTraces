@@ -1,6 +1,6 @@
-"""raphe.py: 
+"""minimal_network.py
 
-A small network of raphe neurons.
+A small network with 'single cell shutting down whole network' behaviour.
 
 """
 
@@ -30,7 +30,7 @@ shutdown, this network should shut down.
 
 rapheN = 9
 interN = 9
-inputN = rapheN
+inputN = rapheN - 2
 
 monitors = []
 
@@ -75,7 +75,7 @@ inputClampedMonitor = SpikeMonitor( inputWithClamp )
 interneuronNet = NeuronGroup( interN
         , '''
             dv/dt = (ge+gi-(v+49*mV))/(5*ms) : volt
-            dge/dt = -ge/(2*ms) : volt
+            dge/dt = -ge/(1*ms) : volt
             dgi/dt = -gi/(2*ms) : volt
         '''
         , threshold='v >-50*mV'
@@ -90,40 +90,46 @@ rapheNet = NeuronGroup( rapheN
             dgi/dt = -gi/(10*ms) : volt
 
         '''
-        , threshold='v > -50*mV'
+        , threshold='v > -45.1*mV'
         , reset='v = -70*mV'
         )
 rapheMonitor = SpikeMonitor( rapheNet )
 
 
-# Input-net makes connections onto raphe.
-inputSyn = Synapses( inputNet, rapheNet )
-inputSyn.connect( True, p = 1.0 )
+# Input-net makes excitatory connections onto raphe. These connections are
+# strong but one to one.
+inputSyn = Synapses( inputNet, rapheNet, pre='ge+=30*mV' )
+inputSyn.connect( 'i==j' )
+inputSyn = Synapses( inputWithClamp, rapheNet, pre='ge+=10*mV' )
+#inputSyn.connect( 'i==j+2' )
 
-# These interneurons make very weak inhibitory but many syapases onto each
-# other.
-interSyn = Synapses( interneuronNet, interneuronNet, pre='ge+=2*mV')
-interSyn.connect( 'i!=j' )
+# Raphe neurons in turn one to one strong inhibitory connections onto
+# interneurons.
+raphe2Interneurons = Synapses( rapheNet, interneuronNet, pre='gi-=10*mV')
+raphe2Interneurons.connect( 'i==j' )
 
-# However, raphe neurons make strong inhibitory synapses onto interneurons.
-clampedSyn = Synapses( inputWithClamp, rapheNet, pre='ge-=9*mV')
-clampedSyn.connect( 'abs(i-j)<1' )
+# Interneurons makes weak inhibtory synapses onto raphe, These connections are
+# dense.
+inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=1*mV' )
+#inter2Raphe.connect( True, p= 1.0)
 
 
 run( 3*second )
+marker = '.'
 pylab.subplot(4, 1, 2)
-pylab.plot( inputMonitor.t, inputMonitor.i, '|')
+pylab.plot( inputMonitor.t, inputMonitor.i, marker)
 plot( inputClampedMonitor.t, inputClampedMonitor.i, 'x' )
-pylab.ylim([-1, inputN] )
 pylab.title( 'Input spikes')
 
 pylab.subplot(4, 1, 3)
-plot( interMonitor.t, interMonitor.i, '|' ) 
+plot( interMonitor.t, interMonitor.i, marker ) 
 
 pylab.subplot(4, 1, 4)
-plot( rapheMonitor.t, rapheMonitor.i, '|' ) 
+plot( rapheMonitor.t, rapheMonitor.i, marker ) 
 pylab.title( 'Raphe neurons' )
 pylab.suptitle( footer, fontsize=8, verticalalignment = 'bottom' )
 pylab.tight_layout()
+outfile = '%s.png' % sys.argv[0]
+print('[INFO] Writing output to %s' % outfile)
 pylab.savefig( "%s.png" % sys.argv[0] )
 
