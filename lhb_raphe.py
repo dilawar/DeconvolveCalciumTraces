@@ -79,7 +79,7 @@ dge/dt = -ge/(5*ms) : volt
 dgi/dt = -gi/(10*ms) : volt
 
 '''
-raphe = NeuronGroup(lhbN, rapheEq, threshold='v>-49.5*mV', reset='v=-60*mV')
+raphe = NeuronGroup(rapheN, rapheEq, threshold='v>-49.5*mV', reset='v=-60*mV')
 raphe.v = '-50*mV*rand()'
 # and some inhibitory interneurons.
 interNeurons = NeuronGroup(rapheN, rapheEq, threshold='v>-49.5*mV', reset='v=-60*mV')
