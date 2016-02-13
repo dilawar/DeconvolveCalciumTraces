@@ -74,9 +74,9 @@ inputClampedMonitor = SpikeMonitor( inputWithClamp )
 # fast as 35Hz.
 interneuronNet = NeuronGroup( interN
         , '''
-            dv/dt = (ge+gi-(v+49*mV))/(5*ms) : volt
-            dge/dt = -ge/(1*ms) : volt
-            dgi/dt = -gi/(2*ms) : volt
+            dv/dt = (ge+gi-(v+49*mV))/(6*ms) : volt
+            dge/dt = -ge/(2*ms) : volt
+            dgi/dt = -gi/(10*ms) : volt
         '''
         , threshold='v >-50*mV'
         , reset = 'v = -70*mV'
@@ -111,11 +111,11 @@ raphe2Interneurons.connect( 'i==j' )
 
 # Interneurons makes weak inhibtory synapses onto raphe, These connections are
 # dense.
-inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=2*mV' )
+inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=2.62*mV' )
 inter2Raphe.connect( True, p= 1.0)
 
 
-run( 3*second )
+run( 10*second )
 marker = '.'
 pylab.subplot(4, 1, 2)
 pylab.plot( inputMonitor.t, inputMonitor.i, marker)
