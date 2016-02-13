@@ -36,7 +36,7 @@ monitors = []
 
 footer = ""
 
-shutdown = 1.5
+shutdown = 4.5
 stimulus = TimedArray(np.array([45, 58]), dt=shutdown*second)
 
 inputNet = NeuronGroup( inputN 
