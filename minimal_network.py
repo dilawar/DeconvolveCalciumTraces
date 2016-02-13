@@ -90,7 +90,7 @@ rapheNet = NeuronGroup( rapheN
             dgi/dt = -gi/(10*ms) : volt
 
         '''
-        , threshold='v > -45.1*mV'
+        , threshold='v > -50*mV'
         , reset='v = -70*mV'
         )
 rapheMonitor = SpikeMonitor( rapheNet )
@@ -98,15 +98,16 @@ rapheMonitor = SpikeMonitor( rapheNet )
 
 # Input-net makes excitatory connections onto raphe. These connections are
 # strong but one to one.
-inputSyn = Synapses( inputNet, rapheNet, pre='ge+=30*mV' )
-inputSyn.connect( 'i==j' )
-inputSyn = Synapses( inputWithClamp, rapheNet, pre='ge+=10*mV' )
+inputSyn = Synapses( inputNet, rapheNet, pre = 'ge+=10*mV' )
+inputSyn.connect( True, p = 0.01 )
+
+inputSyn = Synapses( inputWithClamp, rapheNet, pre = 'ge+=10*mV' )
 #inputSyn.connect( 'i==j+2' )
 
 # Raphe neurons in turn one to one strong inhibitory connections onto
 # interneurons.
 raphe2Interneurons = Synapses( rapheNet, interneuronNet, pre='gi-=10*mV')
-raphe2Interneurons.connect( 'i==j' )
+#raphe2Interneurons.connect( 'i==j' )
 
 # Interneurons makes weak inhibtory synapses onto raphe, These connections are
 # dense.
