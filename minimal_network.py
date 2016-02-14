@@ -56,7 +56,7 @@ monitors = []
 titleText = ""
 
 shutdown = 1.5
-stimulus = TimedArray(np.array([45, 58]), dt=shutdown*second)
+stimulus = TimedArray(np.array([45, 58, 45]), dt=shutdown*second)
 
 inputNet = NeuronGroup( inputN 
         , '''
@@ -132,11 +132,11 @@ raphe2Interneurons.connect( 'i==j' )
 # are sparse. To make sure that effect is similar to previous version, one
 # hypothise that interneurons are exciting their neighbours.
 inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=2*mV' )
-probOfConnection = 0.9
+probOfConnection = 1.0
 inter2Raphe.connect( 'abs(i-j) <=4 and i!=j', p=probOfConnection)
 
 # excite your neighbour
-inter2interExc = Synapses( interneuronNet, interneuronNet, pre='ge+=4*mV')
+inter2interExc = Synapses( interneuronNet, interneuronNet, pre='ge+=5*mV')
 inter2interExc.connect( 'abs(i-j)<=2 and i!=j' )
 
 
