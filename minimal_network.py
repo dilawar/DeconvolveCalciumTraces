@@ -131,16 +131,13 @@ raphe2Interneurons.connect( 'i==j' )
 # Interneurons makes weak inhibtory synapses onto raphe. In this version, these
 # are sparse. To make sure that effect is similar to previous version, one
 # hypothise that interneurons are exciting their neighbours.
-inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=2*mV' )
+inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=6*mV' )
 probOfConnection = 1.0
-inter2Raphe.connect( 'abs(i-j) <=4 and i!=j', p=probOfConnection)
+inter2Raphe.connect( 'abs(i-j) <=3 and i!=j', p=probOfConnection)
 
 # excite your neighbour
 inter2interExc = Synapses( interneuronNet, interneuronNet, pre='ge+=5*mV')
 inter2interExc.connect( 'abs(i-j)<=2 and i!=j' )
-
-
-
 
 titleText += '\nProbabilty I --| R = %s, neighbourhood=%s' %(probOfConnection,4)
 stamp = datetime.datetime.now().isoformat()
@@ -180,7 +177,7 @@ def write_graphviz( ):
     #pylab.show()
 
 def main( ):
-    simulate( runtime = 4 )
+    simulate( runtime = 7 )
     #write_graphviz( )
 
 if __name__ == '__main__':
