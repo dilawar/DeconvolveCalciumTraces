@@ -95,7 +95,7 @@ interneuronNet = NeuronGroup( interN
         , '''
             dv/dt = (ge+gi-(v+45*mV))/(20*ms) : volt
             dge/dt = -ge/(7*ms) : volt
-            dgi/dt = -gi/(5*ms) : volt
+            dgi/dt = -gi/(7*ms) : volt
         '''
         , threshold='v > -46*mV'
         , reset = 'v = -60*mV'
