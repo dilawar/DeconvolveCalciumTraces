@@ -55,8 +55,8 @@ monitors = []
 
 titleText = ""
 
-shutdown = 1.5
-stimulus = TimedArray(np.array([45, 58, 45]), dt=shutdown*second)
+shutdown = 2.0
+stimulus = TimedArray(np.array([45, 58, 45, 58, 25, 58]), dt=shutdown*second)
 
 inputNet = NeuronGroup( inputN 
         , '''
@@ -104,12 +104,12 @@ interMonitor = SpikeMonitor( interneuronNet )
 
 rapheNet = NeuronGroup( rapheN
         , '''
-            dv/dt = (ge+gi-(v+49*mV))/(20*ms) : volt
+            dv/dt = (ge+gi-(v+50*mV))/(40*ms) : volt
             dge/dt = -ge/(5*ms) : volt
             dgi/dt = -gi/(10*ms) : volt
 
         '''
-        , threshold='v > -40*mV'
+        , threshold='v > -50*mV'
         , reset='v = -70*mV'
         )
 rapheMonitor = SpikeMonitor( rapheNet )
@@ -117,10 +117,10 @@ rapheMonitor = SpikeMonitor( rapheNet )
 
 # Input-net makes excitatory connections onto raphe. These connections are
 # strong but one to one.
-inputSyn = Synapses( inputNet, rapheNet, pre = 'v_post+=20*mV' )
+inputSyn = Synapses( inputNet, rapheNet, pre = 'ge+=20*mV' )
 inputSyn.connect( 'i+1==j' )
 
-inputSyn1 = Synapses( inputWithClamp, rapheNet, pre = 'v_post+=20*mV' )
+inputSyn1 = Synapses( inputWithClamp, rapheNet, pre = 'ge+=10*mV' )
 inputSyn1.connect( 'j==0' )
 
 # Raphe neurons in turn one to one strong inhibitory connections onto
@@ -131,13 +131,15 @@ raphe2Interneurons.connect( 'i==j' )
 # Interneurons makes weak inhibtory synapses onto raphe. In this version, these
 # are sparse. To make sure that effect is similar to previous version, one
 # hypothise that interneurons are exciting their neighbours.
-inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=6*mV' )
+# NOTE: It is quite likely that interneurons makes connection to neighbours in
+# the radius of 4.
+inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=2.5*mV' )
 probOfConnection = 1.0
-inter2Raphe.connect( 'abs(i-j) <=3 and i!=j', p=probOfConnection)
+#inter2Raphe.connect( 'abs(i-j) <=2 and i!=j', p=probOfConnection)
 
-# excite your neighbour
+# excite your neighbour, how many?
 inter2interExc = Synapses( interneuronNet, interneuronNet, pre='ge+=5*mV')
-inter2interExc.connect( 'abs(i-j)<=2 and i!=j' )
+#inter2interExc.connect( 'abs(i-j)<=2 and i!=j' )
 
 titleText += '\nProbabilty I --| R = %s, neighbourhood=%s' %(probOfConnection,4)
 stamp = datetime.datetime.now().isoformat()
@@ -150,7 +152,7 @@ for n in interNode:
 
 def simulate( runtime ):
     run( runtime*second )
-    marker = '.'
+    marker = '|'
     pylab.subplot(4, 1, 2)
     pylab.plot( inputMonitor.t, inputMonitor.i, marker)
     plot( inputClampedMonitor.t, inputClampedMonitor.i, 'x' )
@@ -177,7 +179,7 @@ def write_graphviz( ):
     #pylab.show()
 
 def main( ):
-    simulate( runtime = 7 )
+    simulate( runtime = 8 )
     #write_graphviz( )
 
 if __name__ == '__main__':
