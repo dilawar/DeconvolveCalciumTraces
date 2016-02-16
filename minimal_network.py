@@ -95,7 +95,7 @@ interneuronNet = NeuronGroup( interN
         , '''
             dv/dt = (ge+gi-(v+45*mV))/(15*ms) : volt
             dge/dt = -ge/(5*ms) : volt
-            dgi/dt = -gi/(13*ms) : volt
+            dgi/dt = -gi/(14*ms) : volt
         '''
         , threshold='v > -46*mV'
         , reset = 'v = -70*mV'
@@ -139,11 +139,12 @@ inter2interExc.connect( 'abs(i-j)<=2 and i!=j', p = 1.0 )
 # NOTE: It is quite likely that interneurons makes connection to neighbours in
 # the radius of 4.
 inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=2.0*mV' )
-inter2Raphe.connect( 'abs(i-j) <=2 and i!=j', p = 1.0)
+neighbourhood = 2
+inter2Raphe.connect( 'abs(i-j) <=%d and i!=j' % neighbourhood, p = 1.0)
 
-titleText += '\nProbabilty I --| R = %s, neighbourhood=%s' %(1.0,4)
+titleText += '\nProb(IN --| RN) = %s, neighbourhood=%s' %(1.0,neighbourhood)
 stamp = datetime.datetime.now().isoformat()
-titleText += '\nSimulated on: \n%s' % stamp
+titleText += '\nSimulated on: %s' % stamp
 
 # Connect in graph as well.
 for n in interNode:
@@ -160,6 +161,7 @@ def simulate( runtime ):
 
     pylab.subplot(4, 1, 3)
     plot( interMonitor.t, interMonitor.i, marker ) 
+    pylab.title( 'Interneurons' )
 
     pylab.subplot(4, 1, 4)
     plot( rapheMonitor.t, rapheMonitor.i, marker ) 
