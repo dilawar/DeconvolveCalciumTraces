@@ -169,12 +169,25 @@ And a representative simulation of this topology is shown in figure
 
 \begin{figure}[ht!]
 \begin{center}
-    \includegraphics[width=1\textwidth]{./_snapshots/minimal_network.py.png}
+    \includegraphics[width=1\textwidth]{./_snapshots/minimal_network.png}
 \end{center}
-\caption{}
-\label{fig:}
+\caption{Representative simulation of network shown figure \ref{fig:2}.}
+\label{fig:simulation2}
 \end{figure}
 
+\section{Notes}
+\label{sec:notes}
 
+\begin{itemize}
+    \item Parameter space in which network shows desired behaviour i.e. One
+        input neuron off $\rightarrow$ Raphe off is tiny. I've not explored it
+        systematically. Also, as expected, a tiny perturbation of parameters can
+        negate the intended behaviour of system.
+    \item The file \texttt{minimal\_network.py} implements both topology in
+        different branch: branch \texttt{master} has the topology A and branch
+        \texttt{sparse} has topology B. This document should be same in both
+        branches. 
+\end{itemize}
+\todo[]{merge both branches}. 
 
 \end{document}
