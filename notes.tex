@@ -15,6 +15,7 @@
 
 \begin{document}
 
+
 Synapse \tikz \draw[-*] (0,0) -- ++(.5,0); are excitatory, and synapse \tikz
 \draw[-|,] (0,0) -- ++(.5,0); is inhibitory.
 
@@ -187,6 +188,9 @@ And a representative simulation of this topology is shown in figure
         input neuron off $\rightarrow$ Raphe off is tiny. I've not explored it
         systematically. Also, as expected, a tiny perturbation of parameters can
         negate the intended behaviour of system.
+    \item Paramters $g_i$ and $g_e$ in brain2 models have very strong effect on
+        network. I don't understand them well yet. Probably a better neuron
+        model (HH types) can be used later.
 \end{itemize}
 
 \end{document}
