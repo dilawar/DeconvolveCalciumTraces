@@ -21,6 +21,8 @@ Synapse \tikz \draw[-*] (0,0) -- ++(.5,0); are excitatory, and synapse \tikz
 \section{Topology A}
 \label{sec:1}
 
+This is implemented in file \texttt{./minimal\_network\_topologyA.py}
+
 \begin{figure}[ht]
     \centering
     \begin{tikzpicture}[scale=1 
@@ -91,6 +93,8 @@ next section.
 
 \section{Topology B}
 \label{sec:2}
+
+This is implemented in file \texttt{./minimal\_network\_topologyB.py}
 
 This topology is bit more realistic than topology A of section \ref{sec:1}.
 
@@ -183,11 +187,6 @@ And a representative simulation of this topology is shown in figure
         input neuron off $\rightarrow$ Raphe off is tiny. I've not explored it
         systematically. Also, as expected, a tiny perturbation of parameters can
         negate the intended behaviour of system.
-    \item The file \texttt{minimal\_network.py} implements both topology in
-        different branch: branch \texttt{master} has the topology A and branch
-        \texttt{sparse} has topology B. This document should be same in both
-        branches. 
 \end{itemize}
-\todo[]{merge both branches}. 
 
 \end{document}
