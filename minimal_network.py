@@ -27,8 +27,8 @@ shutdown, this network should shut down.
 """
 
 
-rapheN = 9
-interN = 9
+rapheN = 15
+interN = 15
 inputN = rapheN - 1
 
 # Add the nodes.
@@ -93,23 +93,23 @@ inputClampedMonitor = SpikeMonitor( inputWithClamp )
 # fast as 35Hz.
 interneuronNet = NeuronGroup( interN
         , '''
-            dv/dt = (ge+gi-(v+45*mV))/(20*ms) : volt
-            dge/dt = -ge/(7*ms) : volt
-            dgi/dt = -gi/(7*ms) : volt
+            dv/dt = (ge+gi-(v+45*mV))/(15*ms) : volt
+            dge/dt = -ge/(5*ms) : volt
+            dgi/dt = -gi/(13*ms) : volt
         '''
         , threshold='v > -46*mV'
-        , reset = 'v = -60*mV'
+        , reset = 'v = -70*mV'
         )
 interMonitor = SpikeMonitor( interneuronNet )
 
 rapheNet = NeuronGroup( rapheN
         , '''
-            dv/dt = (ge+gi-(v+50*mV))/(40*ms) : volt
-            dge/dt = -ge/(5*ms) : volt
+            dv/dt = (ge+gi-(v+45*mV))/(20*ms) : volt
+            dge/dt = -ge/(10*ms) : volt
             dgi/dt = -gi/(10*ms) : volt
 
         '''
-        , threshold='v > -50*mV'
+        , threshold='v > -45*mV'
         , reset='v = -70*mV'
         )
 rapheMonitor = SpikeMonitor( rapheNet )
@@ -117,7 +117,7 @@ rapheMonitor = SpikeMonitor( rapheNet )
 
 # Input-net makes excitatory connections onto raphe. These connections are
 # strong but one to one.
-inputSyn = Synapses( inputNet, rapheNet, pre = 'ge+=20*mV' )
+inputSyn = Synapses( inputNet, rapheNet, pre = 'ge+=10*mV' )
 inputSyn.connect( 'i+1==j' )
 
 inputSyn1 = Synapses( inputWithClamp, rapheNet, pre = 'ge+=10*mV' )
@@ -125,23 +125,23 @@ inputSyn1.connect( 'j==0' )
 
 # Raphe neurons in turn one to one strong inhibitory connections onto
 # interneurons.
-raphe2Interneurons = Synapses( rapheNet, interneuronNet, pre='gi-=10*mV')
+raphe2Interneurons = Synapses( rapheNet, interneuronNet, pre='gi-=20*mV')
 raphe2Interneurons.connect( 'i==j' )
+
+
+# excite thy neighbour, how many? Just the nearest one.
+inter2interExc = Synapses( interneuronNet, interneuronNet, pre='ge+=9*mV')
+inter2interExc.connect( 'abs(i-j)<=2 and i!=j', p = 1.0 )
 
 # Interneurons makes weak inhibtory synapses onto raphe. In this version, these
 # are sparse. To make sure that effect is similar to previous version, one
 # hypothise that interneurons are exciting their neighbours.
 # NOTE: It is quite likely that interneurons makes connection to neighbours in
 # the radius of 4.
-inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=2.5*mV' )
-probOfConnection = 1.0
-#inter2Raphe.connect( 'abs(i-j) <=2 and i!=j', p=probOfConnection)
+inter2Raphe = Synapses( interneuronNet, rapheNet, pre='gi-=2.0*mV' )
+inter2Raphe.connect( 'abs(i-j) <=2 and i!=j', p = 1.0)
 
-# excite your neighbour, how many?
-inter2interExc = Synapses( interneuronNet, interneuronNet, pre='ge+=5*mV')
-#inter2interExc.connect( 'abs(i-j)<=2 and i!=j' )
-
-titleText += '\nProbabilty I --| R = %s, neighbourhood=%s' %(probOfConnection,4)
+titleText += '\nProbabilty I --| R = %s, neighbourhood=%s' %(1.0,4)
 stamp = datetime.datetime.now().isoformat()
 titleText += '\nSimulated on: \n%s' % stamp
 
